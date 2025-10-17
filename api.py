@@ -9,7 +9,7 @@ app = FastAPI(title="Auralis API")
 
 
 @app.get("/")
-def root():
+def root() -> dict: 
     return {
         "status": "ok",
         "message": "Auralis API is running. See /docs for interactive docs.",
@@ -27,7 +27,7 @@ class SuggestRequest(BaseModel):
 
 
 @app.post("/suggest")
-def suggest(req: SuggestRequest):
+def suggest(req: SuggestRequest) -> dict:
     state = req.dict()
     ctrl = state.pop("controller", "rule_based")
     return suggest_setpoint(state, controller_name=ctrl)
@@ -40,17 +40,17 @@ class RunRequest(BaseModel):
 
 
 @app.post("/run")
-def run(req: RunRequest):
+def run(req: RunRequest) -> dict:
     res = run_controller(
-        controller_name=req.controller, steps=req.steps, seed=req.seed, do_plots=False
+        controller_name=str (req.controller), steps=req.steps, seed=req.seed, do_plots=False
     )
     return {"kpis": res["kpis"], "econ": res["econ"]}
 
 
 # GET alias for convenience/testing
 @app.get("/run")
-def run_get(controller: Optional[str] = "rule_based", steps: int = 60, seed: int = 123):
-    res = run_controller(controller_name=controller, steps=steps, seed=seed, do_plots=False)
+def run_get(controller: Optional[str] = "rule_based", steps: int = 60, seed: int = 123) -> dict:
+    res = run_controller(controller_name=str(controller), steps=steps, seed=seed, do_plots=False)
     return {"kpis": res["kpis"], "econ": res["econ"]}
 
 
@@ -63,13 +63,13 @@ class MultiRunRequest(BaseModel):
 
 
 @app.post("/run_multi")
-def run_multi(req: MultiRunRequest):
+def run_multi(req: MultiRunRequest) -> dict:
     res = run_multinode(
         num_nodes=req.num_nodes,
         feeder_limit=req.feeder_limit,
         steps=req.steps,
         seed=req.seed,
-        controller_name=req.controller,
+        controller_name=str(req.controller),
         do_plots=False,
     )
     return {
@@ -86,13 +86,13 @@ def run_multi_get(
     feeder_limit: float = 0.8,
     steps: int = 60,
     seed: int = 2024,
-):
+) -> dict:
     res = run_multinode(
         num_nodes=num_nodes,
         feeder_limit=feeder_limit,
         steps=steps,
         seed=seed,
-        controller_name=controller,
+        controller_name=str(controller),
         do_plots=False,
     )
     return {

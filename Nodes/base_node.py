@@ -6,7 +6,7 @@ import random
 
 
 class EnergyNode:
-    def __init__(self):
+    def __init__(self) -> None:
         self.energy = 100
         self.degradation = 0.0  # zero deg initially
         self.efficiency = 1.0  # maximal efficiency to begin with
@@ -26,19 +26,19 @@ class EnergyNode:
 
     # Adding basic "behaviuor of the node"
 
-    def charge(self, amount):
+    def charge(self, amount) -> None:
         self.energy = min(self.max_energy, self.energy + amount * self.efficiency)
         self.degradation += 0.001
         self.state = "charging"
 
-    def discharge(self, amount):
+    def discharge(self, amount) -> None:
         self.energy = max(self.min_energy, self.energy - amount / self.efficiency)
         self.state = "discharging"
 
-    def rest(self):
+    def rest(self) -> None:
         self.state = "idle"
 
-    def update_physics(self):
+    def update_physics(self) -> None:
         # Random natural energy leakage (depends on efficiency + random noise)
         leakage = 0.05 * (1 - self.efficiency) + random.uniform(-0.02, 0.02)
         self.energy -= max(0, leakage)
