@@ -5,6 +5,14 @@ from sdk import suggest_setpoint, run_controller, run_multinode
 
 app = FastAPI(title="Auralis API")
 
+@app.get("/")
+def root():
+    return {
+        "status": "ok",
+        "message": "Auralis API is running. See /docs for interactive docs.",
+        "endpoints": ["/suggest", "/run", "/run_multi", "/docs"],
+    }
+
 
 class SuggestRequest(BaseModel):
     energy: float
