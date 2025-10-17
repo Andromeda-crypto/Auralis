@@ -9,6 +9,7 @@ addopts = "-q"
 testpaths = [
   "tests",
 ]
+pythonpath = ["."]
 
 [tool.mypy]
 python_version = "3.11"
