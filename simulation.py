@@ -3,6 +3,11 @@ from utils import plot_metric, compute_kpis, print_run_report, summarize_perform
 from adaptive import adapt_node
 import random
 import time
+import math
+try:
+    import cvxpy as cp
+except Exception:
+    cp = None
 
 class EnergyWorld:
     def __init__(self):
@@ -78,6 +83,52 @@ class MPCLiteController(Controller):
             return ("discharge", 10.0)
         return ("rest", 0.0)
 
+
+class CvxpyMPCController(Controller):
+    def __init__(self, horizon=12, max_rate=12.0, min_soc=0.2, max_soc=0.9):
+        self.horizon = horizon
+        self.max_rate = max_rate
+        self.min_soc = min_soc
+        self.max_soc = max_soc
+        self.window = []
+
+    def select_action(self, node, world, net_flow, step):
+        if cp is None:
+            return MPCLiteController(self.horizon).select_action(node, world, net_flow, step)
+
+        # Simple rolling forecast (persistence)
+        self.window.append(world.price)
+        if len(self.window) > 48:
+            self.window.pop(0)
+        last_price = self.window[-1]
+        forecast = [self.window[-i-1] if i < len(self.window) else last_price for i in range(self.horizon)]
+        forecast = list(reversed(forecast))
+
+        soc0 = max(0.0, min(1.0, node.energy / node.capacity))
+        u = cp.Variable(self.horizon)
+        soc = cp.Variable(self.horizon + 1)
+        constraints = [soc[0] == soc0]
+        for t in range(self.horizon):
+            constraints += [
+                soc[t+1] == soc[t] + (u[t] / node.capacity),
+                cp.abs(u[t]) <= self.max_rate,
+            ]
+        constraints += [soc >= self.min_soc, soc <= self.max_soc]
+
+        objective = cp.Minimize(cp.sum([-forecast[t] * u[t] for t in range(self.horizon)]) + 0.01 * cp.sum_squares(u))
+        prob = cp.Problem(objective, constraints)
+        try:
+            prob.solve(solver=cp.ECOS, warm_start=True, verbose=False)
+        except Exception:
+            return ("rest", 0.0)
+        if u.value is None:
+            return ("rest", 0.0)
+        u0 = float(u.value[0])
+        if u0 > 1e-3:
+            return ("charge", min(self.max_rate, u0))
+        if u0 < -1e-3:
+            return ("discharge", min(self.max_rate, abs(u0)))
+        return ("rest", 0.0)
 
 def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir="artifacts"):
     random.seed(seed)
@@ -164,6 +215,7 @@ if __name__ == "__main__":
         HeuristicController(),
         RuleBasedController(),
         MPCLiteController(),
+        CvxpyMPCController(),
     ]
 
     results = {}
@@ -173,6 +225,26 @@ if __name__ == "__main__":
         results[ctrl.name()] = run_sim(ctrl, steps=60, seed=seed_base + idx, do_plots=True)
 
     print("\nAll controller runs complete.")
+
+def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
+    ctrls = ctrls or [HeuristicController(), RuleBasedController(), MPCLiteController(), CvxpyMPCController()]
+    rows = []
+    for ctrl in ctrls:
+        savings_list = []
+        viol_list = []
+        for s in seeds:
+            res = run_sim(ctrl, steps=steps, seed=int(s), do_plots=False)
+            savings_list.append(res["econ"].get("savings", 0.0))
+            viol_list.append(res["kpis"].get("constraint_violations", 0))
+        rows.append({
+            "controller": ctrl.name(),
+            "mean_savings": sum(savings_list) / len(savings_list),
+            "total_violations": sum(viol_list),
+        })
+    print("\n=== Leaderboard (mean over seeds) ===")
+    for r in rows:
+        print(f"{r['controller']:<20} savings=${r['mean_savings']:.2f}  violations={r['total_violations']}")
+    return rows
 
 
 # --- Multi-node with shared feeder constraint --- #

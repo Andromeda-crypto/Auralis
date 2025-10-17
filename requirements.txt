@@ -5,3 +5,8 @@ fastapi
 pydantic
 uvicorn
 streamlit
+pytest
+pytest-cov
+mypy
+ruff
+cvxpy
