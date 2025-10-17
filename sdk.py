@@ -5,8 +5,7 @@ from simulation import (
     MPCLiteController,
     RuleBasedController,
     run_multi_node,
-    run_sim,
-)
+    run_sim)
 
 
 CONTROLLERS = {
