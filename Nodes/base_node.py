@@ -41,7 +41,7 @@ class EnergyNode:
     def update_physics(self) -> None:
         # Random natural energy leakage (depends on efficiency + random noise)
         leakage = 0.05 * (1 - self.efficiency) + random.uniform(-0.02, 0.02)
-        self.energy -= max(0, leakage)
+        self.energy -= float(max(0, leakage))
 
         # Temperature dynamics (introduce small variance)
         if self.state == "charging":
@@ -84,7 +84,7 @@ class EnergyNode:
     Add a logging state to give node a memory of what it has done
     """
 
-    def log_state(self):
+    def log_state(self) -> None:
         stability = (self.energy * self.efficiency) / (1 + self.degradation)
 
         # Log current state
@@ -120,7 +120,7 @@ class EnergyNode:
             snapshot["is_unstable"] = snapshot["stability"] < self.stability_threshold
             self.memory.append(snapshot)
 
-    def recall_instability_events(self):
+    def recall_instability_events(self) -> None:
         if not self.memory:
             print("No instability events recorded")
             return

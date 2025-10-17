@@ -1,6 +1,6 @@
 import random
 import time
-
+from typing import Any
 from adaptive import adapt_node
 from Nodes.base_node import EnergyNode
 from utils import (
@@ -20,7 +20,7 @@ from utils import (
 try:
     import cvxpy as cp
 except Exception:
-    cp = None
+    cp: Any = None
 
 
 class EnergyWorld:
@@ -418,6 +418,14 @@ def run_multi_node(
             plot_metric(per_node_histories[0], metric)
         plot_series(prices, "price")
 
+
+# example run can be :
+# --- Demo: Multi-node run ---
+    print("\n=== Running multi-node demo (shared feeder limit) ===")
+    _multi_results = run_multi_node(
+        num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True
+    )
+
     return {
         "nodes": nodes,
         "prices": prices,
@@ -425,8 +433,4 @@ def run_multi_node(
         "site_control_import": site_control_import,
     }
 
-    # --- Demo: Multi-node run ---
-    print("\n=== Running multi-node demo (shared feeder limit) ===")
-    _multi_results = run_multi_node(
-        num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True
-    )
+    

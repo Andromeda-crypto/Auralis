@@ -1,23 +1,23 @@
 """
-Plot to visualize and analyze the simulation of nodes, to specify direction and tasks
+Plot to visualize and analyze the simulation of nodes, to specify direction and tasks.
 """
 
 import csv
 import json
 import os
 from datetime import datetime
+from typing import Any, Dict, List, Tuple, Optional
 
 import matplotlib.pyplot as plt
 
 
-def plot_metric(history, metric_name):
+def plot_metric(history: List[Dict[str, Any]], metric_name: str) -> None:
     values = [entry[metric_name] for entry in history]
     if metric_name == "stability":
         plt.axhline(y=40, color="r", linestyle="--", label="Instability Threshold")
         plt.fill_between(range(len(values)), 0, 40, color="red", alpha=0.1, label="Unstable Zone!")
         plt.legend()
     if metric_name == "energy":
-        # attempt to read bounds from first entry if present
         min_e = min(v for v in values) if not history else history[0].get("min_energy", 0)
         max_e = max(v for v in values) if not history else history[0].get("max_energy", 100)
         plt.axhline(y=min_e, color="gray", linestyle="--", alpha=0.6, label="Min Energy")
@@ -33,7 +33,7 @@ def plot_metric(history, metric_name):
     plt.show()
 
 
-def summarize_performance(history):
+def summarize_performance(history: List[Dict[str, float]]) -> None:
     if not history:
         print("No history to summarize.")
         return
@@ -45,7 +45,12 @@ def summarize_performance(history):
     print(f"Average Stability: {avg_stability:.4f}")
 
 
-def compute_kpis(history, stability_threshold=40, energy_bounds=(0, 100), temperature_cap=85):
+def compute_kpis(
+    history: List[Dict[str, Any]],
+    stability_threshold: float = 40,
+    energy_bounds: Tuple[float, float] = (0, 100),
+    temperature_cap: float = 85,
+) -> Dict[str, float]:
     """
     Compute basic KPIs over a run history.
 
@@ -70,10 +75,10 @@ def compute_kpis(history, stability_threshold=40, energy_bounds=(0, 100), temper
         abs(energy_values[i] - energy_values[i - 1]) for i in range(1, len(energy_values))
     )
 
-    # Prefer using recorded cumulative counters if present
     last = history[-1]
     energy_violations = last.get("energy_violations")
     temperature_violations = last.get("temperature_violations")
+
     if energy_violations is None or temperature_violations is None:
         energy_violations = 0
         temperature_violations = 0
@@ -87,15 +92,15 @@ def compute_kpis(history, stability_threshold=40, energy_bounds=(0, 100), temper
         "mean_efficiency": mean_efficiency,
         "mean_degradation": mean_degradation,
         "mean_stability": mean_stability,
-        "time_unstable": time_unstable,
-        "energy_violations": energy_violations,
-        "temperature_violations": temperature_violations,
-        "constraint_violations": energy_violations + temperature_violations,
+        "time_unstable": float(time_unstable),
+        "energy_violations": float(energy_violations),
+        "temperature_violations": float(temperature_violations),
+        "constraint_violations": float(energy_violations + temperature_violations),
         "energy_throughput": energy_throughput,
     }
 
 
-def print_run_report(history, kpis):
+def print_run_report(history: List[Dict[str, Any]], kpis: Dict[str, float]) -> None:
     if not history:
         print("No run data.")
         return
@@ -104,14 +109,14 @@ def print_run_report(history, kpis):
     print(f"Mean Efficiency: {kpis.get('mean_efficiency', float('nan')):.4f}")
     print(f"Mean Degradation: {kpis.get('mean_degradation', float('nan')):.4f}")
     print(f"Mean Stability: {kpis.get('mean_stability', float('nan')):.4f}")
-    print(f"Time Unstable (<40): {kpis.get('time_unstable', 0)}")
-    print(f"Constraint Violations (total): {kpis.get('constraint_violations', 0)}")
-    print(f" - Energy Bounds Violations: {kpis.get('energy_violations', 0)}")
-    print(f" - Temperature Cap Violations: {kpis.get('temperature_violations', 0)}")
+    print(f"Time Unstable (<40): {kpis.get('time_unstable', 0):.0f}")
+    print(f"Constraint Violations (total): {kpis.get('constraint_violations', 0):.0f}")
+    print(f" - Energy Bounds Violations: {kpis.get('energy_violations', 0):.0f}")
+    print(f" - Temperature Cap Violations: {kpis.get('temperature_violations', 0):.0f}")
     print(f"Energy Throughput: {kpis.get('energy_throughput', 0):.2f}")
 
 
-def plot_series(series, name):
+def plot_series(series: List[float], name: str) -> None:
     if not series:
         print(f"No data for {name}.")
         return
@@ -123,7 +128,11 @@ def plot_series(series, name):
     plt.show()
 
 
-def compute_economic_kpis(price_series, baseline_import_series, control_import_series):
+def compute_economic_kpis(
+    price_series: List[float],
+    baseline_import_series: List[float],
+    control_import_series: List[float],
+) -> Dict[str, float]:
     if not price_series or not baseline_import_series or not control_import_series:
         return {}
     n = min(len(price_series), len(baseline_import_series), len(control_import_series))
@@ -140,7 +149,7 @@ def compute_economic_kpis(price_series, baseline_import_series, control_import_s
     }
 
 
-def print_economic_report(econ_kpis):
+def print_economic_report(econ_kpis: Dict[str, float]) -> None:
     if not econ_kpis:
         print("No economic data.")
         return
@@ -152,17 +161,16 @@ def print_economic_report(econ_kpis):
 
 # --- Artifact utilities --- #
 
-
-def ensure_dir(path):
+def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
 
-def default_run_id(prefix="run"):
+def default_run_id(prefix: str = "run") -> str:
     ts = datetime.now().strftime("%Y%m%d_%H%M%S")
     return f"{prefix}_{ts}"
 
 
-def save_history_csv(history, out_path):
+def save_history_csv(history: List[Dict[str, Any]], out_path: str) -> None:
     if not history:
         return
     keys = list(history[0].keys())
@@ -172,10 +180,11 @@ def save_history_csv(history, out_path):
         writer.writerows(history)
 
 
-def save_json(data, out_path):
+def save_json(data: Any, out_path: str) -> None:
     with open(out_path, "w") as f:
         json.dump(data, f, indent=2)
 
 
-def save_plot(fig, out_path):
+def save_plot(fig: Any, out_path: str) -> None:
     fig.savefig(out_path, bbox_inches="tight")
+
