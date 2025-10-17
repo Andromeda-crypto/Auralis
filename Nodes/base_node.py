@@ -18,6 +18,11 @@ class EnergyNode:
         self.state= 'idle' # can also be charging or discharging
         self.history = [] # stores past actions and consequences
         self.memory = []
+        # Safety constraints configuration
+        self.max_temperature = 85.0
+        # Per-run counters for constraint violations
+        self.energy_violations = 0
+        self.temperature_violations = 0
 
 
    # Adding basic "behaviuor of the node"
@@ -46,7 +51,13 @@ class EnergyNode:
             self.temperature += random.uniform(0.3, 0.6)
         else:
             self.temperature -= random.uniform(0.1, 0.3)
-        self.temperature = max(20, min(85, self.temperature))
+        # Check and cap temperature; count violation if exceeded
+        if self.temperature > self.max_temperature:
+            self.temperature_violations += 1
+            self.temperature = self.max_temperature
+            # penalty: extra wear when overheated
+            self.degradation += 0.002
+        self.temperature = max(20, self.temperature)
 
     # Efficiency dynamically affected by degradation, temp, and energy load
         thermal_penalty = (self.temperature - 25) * 0.0018
@@ -64,7 +75,11 @@ class EnergyNode:
         self.degradation += wear
     # Slight random drift in energy
         self.energy += random.uniform(-0.3, 0.3)
-        self.energy = max(0, min(self.energy, self.capacity))
+        # Enforce energy bounds; count violation if exceeded
+        if self.energy < self.min_energy or self.energy > self.max_energy:
+            self.energy_violations += 1
+            self.degradation += 0.001  # mild penalty
+        self.energy = max(self.min_energy, min(self.energy, self.max_energy))
                             
         
 
@@ -83,7 +98,14 @@ class EnergyNode:
         "degradation": self.degradation,
         "stability": stability,
         "temperature": self.temperature,
-        "state": self.state
+        "state": self.state,
+        # snapshot of cumulative violations to enable per-step deltas if desired
+        "energy_violations": self.energy_violations,
+        "temperature_violations": self.temperature_violations,
+        # bounds for plotting
+        "min_energy": self.min_energy,
+        "max_energy": self.max_energy,
+        "max_temperature": self.max_temperature
     }
         self.history.append(entry)
 
@@ -98,11 +120,9 @@ class EnergyNode:
             "stability": stability,
             "temperature": self.temperature
         }
+            # Mark whether this snapshot is below the node's configured threshold
+            snapshot["is_unstable"] = snapshot["stability"] < self.stability_threshold
             self.memory.append(snapshot)
-            if snapshot["stability"] < self.stability_threshold:
-                snapshot["stability"] == True
-            else:
-                snapshot["stability"] == False
 
     def recall_instability_events(self):
         if not self.memory :
