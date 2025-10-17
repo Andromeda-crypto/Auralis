@@ -12,8 +12,12 @@ class EnergyNode:
         self.efficiency = 1.0  #maximal efficiency to begin with
         self.max_energy = 100
         self.min_energy = 0
+        self.capacity = 100
+        self.temperature = 25.0 # initialize at room temp
+        self.stability_threshold = 40
         self.state= 'idle' # can also be charging or discharging
         self.history = [] # stores past actions and consequences
+        self.memory = []
 
 
    # Adding basic "behaviuor of the node"
@@ -30,17 +34,87 @@ class EnergyNode:
     def rest(self):
         self.state = "idle"
 
+    def update_physics(self):
+    # Random natural energy leakage (depends on efficiency + random noise)
+        leakage = 0.05 * (1 - self.efficiency) + random.uniform(-0.02, 0.02)
+        self.energy -= max(0, leakage)
+
+    # Temperature dynamics (introduce small variance)
+        if self.state == "charging":
+            self.temperature += random.uniform(0.2, 0.5)
+        elif self.state == "discharging":
+            self.temperature += random.uniform(0.3, 0.6)
+        else:
+            self.temperature -= random.uniform(0.1, 0.3)
+        self.temperature = max(20, min(85, self.temperature))
+
+    # Efficiency dynamically affected by degradation, temp, and energy load
+        thermal_penalty = (self.temperature - 25) * 0.0018
+        degradation_penalty = self.degradation * random.uniform(0.4, 0.6)
+        self.efficiency = max(0.5, 1.0 - degradation_penalty - thermal_penalty)
+
+        stress_factor = 1.0
+        if self.temperature > 60:
+            stress_factor += (self.temperature - 60) / 20
+        if self.energy > 95:
+            stress_factor += 0.5
+        if self.energy < 10:
+            stress_factor += 0.5
+        wear = (0.002 if self.state == "idle" else 0.005) * stress_factor
+        self.degradation += wear
+    # Slight random drift in energy
+        self.energy += random.uniform(-0.3, 0.3)
+        self.energy = max(0, min(self.energy, self.capacity))
+                            
+        
+
+    
     """
     Add a logging state to give node a memory of what it has done
     """
 
     def log_state(self):
-        self.history.append({
-            "energy" : self.energy,
+        stability = (self.energy * self.efficiency) / (1 + self.degradation)
+
+    # Log current state
+        entry = {
+        "energy": self.energy,
+        "efficiency": self.efficiency,
+        "degradation": self.degradation,
+        "stability": stability,
+        "temperature": self.temperature,
+        "state": self.state
+    }
+        self.history.append(entry)
+
+    # --- Detect and remember low stability safely ---
+        if stability < 40:  
+            snapshot = {
+            "step": len(self.history),
+            "energy": self.energy,
             "efficiency": self.efficiency,
             "degradation": self.degradation,
-            "state": self.state
-        })
+            "state": self.state,
+            "stability": stability,
+            "temperature": self.temperature
+        }
+            self.memory.append(snapshot)
+            if snapshot["stability"] < self.stability_threshold:
+                snapshot["stability"] == True
+            else:
+                snapshot["stability"] == False
+
+    def recall_instability_events(self):
+        if not self.memory :
+            print("No instability events recorded")
+            return
+        print("\n -------Instability Events -------")
+        for m in self.memory:
+            print(
+            f"Step {m['step']}: Stability={m['stability']:.2f}, "
+            f"Energy={m['energy']:.2f}, Eff={m['efficiency']:.2f}, "
+            f"Degr={m['degradation']:.3f}, State={m['state']}"
+        )
 
     
 
