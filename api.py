@@ -7,6 +7,7 @@ from sdk import run_controller, run_multinode, suggest_setpoint
 
 app = FastAPI(title="Auralis API")
 
+
 @app.get("/")
 def root():
     return {
@@ -45,6 +46,7 @@ def run(req: RunRequest):
     )
     return {"kpis": res["kpis"], "econ": res["econ"]}
 
+
 # GET alias for convenience/testing
 @app.get("/run")
 def run_get(controller: Optional[str] = "rule_based", steps: int = 60, seed: int = 123):
@@ -75,6 +77,7 @@ def run_multi(req: MultiRunRequest):
         "site_control_import": res["site_control_import"],
     }
 
+
 # GET alias for convenience/testing
 @app.get("/run_multi")
 def run_multi_get(
@@ -96,5 +99,3 @@ def run_multi_get(
         "site_baseline_import": res["site_baseline_import"],
         "site_control_import": res["site_control_import"],
     }
-
-

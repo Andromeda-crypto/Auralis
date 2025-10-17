@@ -21,7 +21,9 @@ with tab1:
 
 with tab2:
     st.subheader("Multi Node Run")
-    controller = st.selectbox("Controller (multi)", ["heuristic", "rule_based", "mpc_lite"], index=1, key="multi_ctrl")
+    controller = st.selectbox(
+        "Controller (multi)", ["heuristic", "rule_based", "mpc_lite"], index=1, key="multi_ctrl"
+    )
     num_nodes = st.slider("Num Nodes", 2, 12, 3, 1)
     feeder_limit = st.slider("Feeder Import Limit", 0.2, 2.0, 0.8, 0.05)
     steps = st.slider("Steps (multi)", 20, 240, 60, 10, key="multi_steps")
@@ -36,9 +38,9 @@ with tab2:
             controller_name=controller,
             do_plots=do_plots,
         )
-        st.json({
-            "site_baseline_import": res["site_baseline_import"][:10],
-            "site_control_import": res["site_control_import"][:10],
-        })
-
-
+        st.json(
+            {
+                "site_baseline_import": res["site_baseline_import"][:10],
+                "site_control_import": res["site_control_import"][:10],
+            }
+        )

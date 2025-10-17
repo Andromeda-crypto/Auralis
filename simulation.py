@@ -1,7 +1,8 @@
-from Nodes.base_node import EnergyNode
-from adaptive import adapt_node
 import random
 import time
+
+from adaptive import adapt_node
+from Nodes.base_node import EnergyNode
 from utils import (
     compute_economic_kpis,
     compute_kpis,
@@ -13,11 +14,14 @@ from utils import (
     print_run_report,
     save_history_csv,
     save_json,
-    summarize_performance)
+    summarize_performance,
+)
+
 try:
     import cvxpy as cp
 except Exception:
     cp = None
+
 
 class EnergyWorld:
     def __init__(self):
@@ -36,6 +40,7 @@ class EnergyWorld:
 
 
 # --- Controllers --- #
+
 
 class Controller:
     def name(self):
@@ -112,8 +117,7 @@ class CvxpyMPCController(Controller):
             self.window.pop(0)
         last_price = self.window[-1]
         forecast = [
-            self.window[-i - 1] if i < len(self.window) else last_price
-            for i in range(self.horizon)
+            self.window[-i - 1] if i < len(self.window) else last_price for i in range(self.horizon)
         ]
         forecast = list(reversed(forecast))
 
@@ -123,7 +127,7 @@ class CvxpyMPCController(Controller):
         constraints = [soc[0] == soc0]
         for t in range(self.horizon):
             constraints += [
-                soc[t+1] == soc[t] + (u[t] / node.capacity),
+                soc[t + 1] == soc[t] + (u[t] / node.capacity),
                 cp.abs(u[t]) <= self.max_rate,
             ]
         constraints += [soc >= self.min_soc, soc <= self.max_soc]
@@ -144,6 +148,7 @@ class CvxpyMPCController(Controller):
         if u0 < -1e-3:
             return ("discharge", min(self.max_rate, abs(u0)))
         return ("rest", 0.0)
+
 
 def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir="artifacts"):
     random.seed(seed)
@@ -251,6 +256,7 @@ if __name__ == "__main__":
 
     print("\nAll controller runs complete.")
 
+
 def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
     ctrls = ctrls or [
         HeuristicController(),
@@ -266,20 +272,26 @@ def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
             res = run_sim(ctrl, steps=steps, seed=int(s), do_plots=False)
             savings_list.append(res["econ"].get("savings", 0.0))
             viol_list.append(res["kpis"].get("constraint_violations", 0))
-        rows.append({
-            "controller": ctrl.name(),
-            "mean_savings": sum(savings_list) / len(savings_list),
-            "total_violations": sum(viol_list),
-        })
+        rows.append(
+            {
+                "controller": ctrl.name(),
+                "mean_savings": sum(savings_list) / len(savings_list),
+                "total_violations": sum(viol_list),
+            }
+        )
     print("\n=== Leaderboard (mean over seeds) ===")
     for r in rows:
-        print(
-            f"{r['controller']:<20} savings=${r['mean_savings']:.2f}  violations={r['total_violations']}"
+       print(
+        f"{r['controller']:<20} "
+        f"savings=${r['mean_savings']:.2f} "
+        f"violations={r['total_violations']}"
         )
+
     return rows
 
 
 # --- Multi-node with shared feeder constraint --- #
+
 
 def run_multi_node(
     num_nodes=3,
@@ -315,7 +327,7 @@ def run_multi_node(
         # Coordinator: if baseline import exceeds feeder limit, allocate discharge across nodes
         required_reduction = max(0.0, baseline_import - feeder_limit)
 
-        actions = []  
+        actions = []
         if required_reduction > 0:
             socs = [100.0 * (n.energy / n.capacity) for n in nodes]
             capacities = [max(0.0, (soc - 30.0) / 70.0) for soc in socs]  # 0..1
@@ -355,8 +367,11 @@ def run_multi_node(
             adapt_node(nodes[i])
             per_node_histories[i] = nodes[i].history
         print(
-            f"MultiNode step {step:02d}: import={total_import:.3f}/{feeder_limit:.3f} price={world.price:.2f}"
-        )
+            f"MultiNode step {step:02d}: "
+            f"import={total_import:.3f}/{feeder_limit:.3f} "
+            f"price={world.price:.2f}"
+            )
+
         time.sleep(0.01)
 
     # Aggregate KPIs: per node plus economic site KPIs
@@ -410,8 +425,7 @@ def run_multi_node(
         "site_control_import": site_control_import,
     }
 
-
-# --- Demo: Multi-node run --- 
+    # --- Demo: Multi-node run ---
     print("\n=== Running multi-node demo (shared feeder limit) ===")
     _multi_results = run_multi_node(
         num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True

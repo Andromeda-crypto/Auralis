@@ -9,23 +9,22 @@ from datetime import datetime
 
 import matplotlib.pyplot as plt
 
-def plot_metric(history,metric_name):
+
+def plot_metric(history, metric_name):
     values = [entry[metric_name] for entry in history]
-    if metric_name =="stability":
-        plt.axhline(y=40,color='r', linestyle = '--', label="Instability Threshold")
-        plt.fill_between(
-            range(len(values)), 0, 40, color='red', alpha=0.1, label ="Unstable Zone!"
-        )
+    if metric_name == "stability":
+        plt.axhline(y=40, color="r", linestyle="--", label="Instability Threshold")
+        plt.fill_between(range(len(values)), 0, 40, color="red", alpha=0.1, label="Unstable Zone!")
         plt.legend()
     if metric_name == "energy":
         # attempt to read bounds from first entry if present
         min_e = min(v for v in values) if not history else history[0].get("min_energy", 0)
         max_e = max(v for v in values) if not history else history[0].get("max_energy", 100)
-        plt.axhline(y=min_e, color='gray', linestyle='--', alpha=0.6, label="Min Energy")
-        plt.axhline(y=max_e, color='gray', linestyle='--', alpha=0.6, label="Max Energy")
+        plt.axhline(y=min_e, color="gray", linestyle="--", alpha=0.6, label="Min Energy")
+        plt.axhline(y=max_e, color="gray", linestyle="--", alpha=0.6, label="Max Energy")
     if metric_name == "temperature":
         cap = history[0].get("max_temperature", 85) if history else 85
-        plt.axhline(y=cap, color='orange', linestyle='--', alpha=0.8, label="Temp Cap")
+        plt.axhline(y=cap, color="orange", linestyle="--", alpha=0.8, label="Temp Cap")
     plt.plot(values, label=metric_name)
     plt.xlabel("Timestep")
     plt.ylabel(metric_name.capitalize())
@@ -153,6 +152,7 @@ def print_economic_report(econ_kpis):
 
 # --- Artifact utilities --- #
 
+
 def ensure_dir(path):
     os.makedirs(path, exist_ok=True)
 
@@ -179,5 +179,3 @@ def save_json(data, out_path):
 
 def save_plot(fig, out_path):
     fig.savefig(out_path, bbox_inches="tight")
-    
-

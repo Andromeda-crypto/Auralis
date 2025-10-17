@@ -5,6 +5,7 @@ Reads node memory, detects instability patterns, and applies corrective adjustme
 Designed to be modular and extensible for future metrics and specialized nodes.
 """
 
+
 def adapt_node(node, lookback=20, stability_threshold=40):
     """
     Perform adaptive corrections on the node based on past instability events.
@@ -41,4 +42,3 @@ def adapt_node(node, lookback=20, stability_threshold=40):
     node.degradation *= 0.995
 
     # 4️⃣ Placeholder for future metrics (voltage, current, vibrations)
-    

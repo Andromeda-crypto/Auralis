@@ -12,4 +12,3 @@ def test_run_sim_returns_kpis():
     res = run_sim(HeuristicController(), steps=5, seed=1, do_plots=False)
     assert "kpis" in res and "econ" in res
     assert len(res["history"]) == 5
-
