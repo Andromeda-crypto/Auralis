@@ -5,8 +5,10 @@ Reads node memory, detects instability patterns, and applies corrective adjustme
 Designed to be modular and extensible for future metrics and specialized nodes.
 """
 
+from Nodes.base_node import EnergyNode
 
-def adapt_node(node, lookback=20, stability_threshold=40):
+
+def adapt_node(node: EnergyNode, lookback: int = 20, stability_threshold: float = 40.0) -> None:
     """
     Perform adaptive corrections on the node based on past instability events.
 

@@ -9,7 +9,7 @@ app = FastAPI(title="Auralis API")
 
 
 @app.get("/")
-def root() -> dict: 
+def root() -> dict:
     return {
         "status": "ok",
         "message": "Auralis API is running. See /docs for interactive docs.",
@@ -42,7 +42,7 @@ class RunRequest(BaseModel):
 @app.post("/run")
 def run(req: RunRequest) -> dict:
     res = run_controller(
-        controller_name=str (req.controller), steps=req.steps, seed=req.seed, do_plots=False
+        controller_name=str(req.controller), steps=req.steps, seed=req.seed, do_plots=False
     )
     return {"kpis": res["kpis"], "econ": res["econ"]}
 

@@ -1,6 +1,7 @@
 import random
 import time
-from typing import Any
+from typing import Any, Callable, Tuple
+
 from adaptive import adapt_node
 from Nodes.base_node import EnergyNode
 from utils import (
@@ -18,20 +19,21 @@ from utils import (
 )
 
 try:
-    import cvxpy as cp
+    import cvxpy as cvxpy_module
+    cp: Any = cvxpy_module
 except Exception:
-    cp: Any = None
+    cp = None
 
 
 class EnergyWorld:
-    def __init__(self):
+    def __init__(self) -> None:
         self.energy_supply = random.uniform(0.5, 1.5)
         self.energy_demand = random.uniform(0.3, 1.2)
         self.noise = random.uniform(-0.05, 0.05)
         # Simple TOU price signal (e.g., low at night, high in evening)
         self.price = 0.20
 
-    def update_conditions(self):
+    def update_conditions(self) -> None:
         # small random fluctuations every step
         self.energy_supply = max(0.1, min(self.energy_supply + random.uniform(-0.2, 0.2), 2.0))
         self.energy_demand = max(0.1, min(self.energy_demand + random.uniform(-0.2, 0.2), 2.0))
@@ -43,15 +45,15 @@ class EnergyWorld:
 
 
 class Controller:
-    def name(self):
+    def name(self) -> str:
         return self.__class__.__name__
 
-    def select_action(self, node, world, net_flow, step):
+    def select_action(self, node: EnergyNode, world: EnergyWorld, net_flow: float, step: int) -> Tuple[str, float]:
         return ("rest", 0.0)
 
 
 class HeuristicController(Controller):
-    def select_action(self, node, world, net_flow, step):
+    def select_action(self, node: EnergyNode, world: EnergyWorld, net_flow: float, step: int) -> Tuple[str, float]:
         if net_flow > 0.2:
             return ("charge", net_flow * random.uniform(5, 15))
         if net_flow < -0.2:
@@ -60,13 +62,13 @@ class HeuristicController(Controller):
 
 
 class RuleBasedController(Controller):
-    def __init__(self, low_price=0.12, high_price=0.30, low_soc=30.0, high_soc=80.0):
+    def __init__(self, low_price: float = 0.12, high_price: float = 0.30, low_soc: float = 30.0, high_soc: float = 80.0) -> None:
         self.low_price = low_price
         self.high_price = high_price
         self.low_soc = low_soc
         self.high_soc = high_soc
 
-    def select_action(self, node, world, net_flow, step):
+    def select_action(self, node: EnergyNode, world: EnergyWorld, net_flow: float, step: int) -> Tuple[str, float]:
         soc = 100.0 * (node.energy / node.capacity)
         if world.price <= self.low_price and soc < self.high_soc:
             magnitude = max(0.0, (self.high_soc - soc) / 100.0) * 12.0
@@ -78,11 +80,11 @@ class RuleBasedController(Controller):
 
 
 class MPCLiteController(Controller):
-    def __init__(self, horizon=12):
+    def __init__(self, horizon: int = 12) -> None:
         self.horizon = horizon
-        self.window = []
+        self.window: list[float] = []
 
-    def select_action(self, node, world, net_flow, step):
+    def select_action(self, node: EnergyNode, world: EnergyWorld, net_flow: float, step: int) -> Tuple[str, float]:
         self.window.append(world.price)
         if len(self.window) > 24:
             self.window.pop(0)
@@ -100,14 +102,14 @@ class MPCLiteController(Controller):
 
 
 class CvxpyMPCController(Controller):
-    def __init__(self, horizon=12, max_rate=12.0, min_soc=0.2, max_soc=0.9):
+    def __init__(self, horizon: int = 12, max_rate: float = 12.0, min_soc: float = 0.2, max_soc: float = 0.9) -> None:
         self.horizon = horizon
         self.max_rate = max_rate
         self.min_soc = min_soc
         self.max_soc = max_soc
-        self.window = []
+        self.window: list[float] = []
 
-    def select_action(self, node, world, net_flow, step):
+    def select_action(self, node: EnergyNode, world: EnergyWorld, net_flow: float, step: int) -> Tuple[str, float]:
         if cp is None:
             return MPCLiteController(self.horizon).select_action(node, world, net_flow, step)
 
@@ -150,13 +152,13 @@ class CvxpyMPCController(Controller):
         return ("rest", 0.0)
 
 
-def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir="artifacts"):
+def run_sim(controller: Controller, steps: int = 50, seed: int = 42, do_plots: bool = False, run_id: str | None = None, out_dir: str = "artifacts") -> dict[str, Any]:
     random.seed(seed)
     node = EnergyNode()
     world = EnergyWorld()
-    prices = []
-    baseline_import = []
-    control_import = []
+    prices: list[float] = []
+    baseline_import: list[float] = []
+    control_import: list[float] = []
 
     for step in range(steps):
         world.update_conditions()
@@ -241,14 +243,14 @@ def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir=
 
 # --- Run all controllers --- #
 if __name__ == "__main__":
-    controllers = [
+    controllers: list[Controller] = [
         HeuristicController(),
         RuleBasedController(),
         MPCLiteController(),
         CvxpyMPCController(),
     ]
 
-    results = {}
+    results: dict[str, Any] = {}
     seed_base = 123
     for idx, ctrl in enumerate(controllers):
         print(f"\n=== Running controller: {ctrl.name()} ===")
@@ -257,17 +259,17 @@ if __name__ == "__main__":
     print("\nAll controller runs complete.")
 
 
-def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
+def run_leaderboard(ctrls: list[Controller] | None = None, steps: int = 60, seeds: tuple[int, ...] = (101, 102, 103)) -> list[dict[str, Any]]:
     ctrls = ctrls or [
         HeuristicController(),
         RuleBasedController(),
         MPCLiteController(),
         CvxpyMPCController(),
     ]
-    rows = []
+    rows: list[dict[str, Any]] = []
     for ctrl in ctrls:
-        savings_list = []
-        viol_list = []
+        savings_list: list[float] = []
+        viol_list: list[int] = []
         for s in seeds:
             res = run_sim(ctrl, steps=steps, seed=int(s), do_plots=False)
             savings_list.append(res["econ"].get("savings", 0.0))
@@ -281,10 +283,10 @@ def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
         )
     print("\n=== Leaderboard (mean over seeds) ===")
     for r in rows:
-       print(
-        f"{r['controller']:<20} "
-        f"savings=${r['mean_savings']:.2f} "
-        f"violations={r['total_violations']}"
+        print(
+            f"{r['controller']:<20} "
+            f"savings=${r['mean_savings']:.2f} "
+            f"violations={r['total_violations']}"
         )
 
     return rows
@@ -294,24 +296,27 @@ def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
 
 
 def run_multi_node(
-    num_nodes=3,
-    feeder_limit=0.8,
-    steps=60,
-    seed=999,
-    controller_factory=lambda: RuleBasedController(),
-    run_id=None,
-    out_dir="artifacts",
-    do_plots=True,
-):
+    num_nodes: int = 3,
+    feeder_limit: float = 0.8,
+    steps: int = 60,
+    seed: int = 999,
+    controller_factory: Callable[[], Controller] | None = None,
+    run_id: str | None = None,
+    out_dir: str = "artifacts",
+    do_plots: bool = True,
+) -> dict[str, Any]:
+    if controller_factory is None:
+        controller_factory = lambda: RuleBasedController()
+    
     random.seed(seed)
     world = EnergyWorld()
-    nodes = [EnergyNode() for _ in range(num_nodes)]
-    ctrls = [controller_factory() for _ in range(num_nodes)]
+    nodes: list[EnergyNode] = [EnergyNode() for _ in range(num_nodes)]
+    ctrls: list[Controller] = [controller_factory() for _ in range(num_nodes)]
 
-    prices = []
-    site_baseline_import = []
-    site_control_import = []
-    per_node_histories = [[] for _ in range(num_nodes)]
+    prices: list[float] = []
+    site_baseline_import: list[float] = []
+    site_control_import: list[float] = []
+    per_node_histories: list[list[dict[str, Any]]] = [[] for _ in range(num_nodes)]
 
     for step in range(steps):
         world.update_conditions()
@@ -327,7 +332,7 @@ def run_multi_node(
         # Coordinator: if baseline import exceeds feeder limit, allocate discharge across nodes
         required_reduction = max(0.0, baseline_import - feeder_limit)
 
-        actions = []
+        actions: list[Tuple[str, float]] = []
         if required_reduction > 0:
             socs = [100.0 * (n.energy / n.capacity) for n in nodes]
             capacities = [max(0.0, (soc - 30.0) / 70.0) for soc in socs]  # 0..1
@@ -370,7 +375,7 @@ def run_multi_node(
             f"MultiNode step {step:02d}: "
             f"import={total_import:.3f}/{feeder_limit:.3f} "
             f"price={world.price:.2f}"
-            )
+        )
 
         time.sleep(0.01)
 
@@ -418,9 +423,8 @@ def run_multi_node(
             plot_metric(per_node_histories[0], metric)
         plot_series(prices, "price")
 
-
-# example run can be :
-# --- Demo: Multi-node run ---
+    # example run can be :
+    # --- Demo: Multi-node run ---
     print("\n=== Running multi-node demo (shared feeder limit) ===")
     _multi_results = run_multi_node(
         num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True
@@ -432,5 +436,3 @@ def run_multi_node(
         "site_baseline_import": site_baseline_import,
         "site_control_import": site_control_import,
     }
-
-    

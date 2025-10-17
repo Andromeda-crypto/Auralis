@@ -6,7 +6,7 @@ import csv
 import json
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Tuple, Optional
+from typing import Any, Dict, List, Tuple
 
 import matplotlib.pyplot as plt
 
@@ -161,6 +161,7 @@ def print_economic_report(econ_kpis: Dict[str, float]) -> None:
 
 # --- Artifact utilities --- #
 
+
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
@@ -187,4 +188,3 @@ def save_json(data: Any, out_path: str) -> None:
 
 def save_plot(fig: Any, out_path: str) -> None:
     fig.savefig(out_path, bbox_inches="tight")
-

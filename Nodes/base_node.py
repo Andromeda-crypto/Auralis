@@ -3,35 +3,36 @@ Creates a Singular Node that behaves like an appliance and has similar character
 """
 
 import random
+from typing import Any
 
 
 class EnergyNode:
     def __init__(self) -> None:
-        self.energy = 100
-        self.degradation = 0.0  # zero deg initially
-        self.efficiency = 1.0  # maximal efficiency to begin with
-        self.max_energy = 100
-        self.min_energy = 0
-        self.capacity = 100
-        self.temperature = 25.0  # initialize at room temp
-        self.stability_threshold = 40
-        self.state = "idle"  # can also be charging or discharging
-        self.history = []  # stores past actions and consequences
-        self.memory = []
+        self.energy: float = 100
+        self.degradation: float = 0.0  # zero deg initially
+        self.efficiency: float = 1.0  # maximal efficiency to begin with
+        self.max_energy: float = 100
+        self.min_energy: float = 0
+        self.capacity: float = 100
+        self.temperature: float = 25.0  # initialize at room temp
+        self.stability_threshold: float = 40
+        self.state: str = "idle"  # can also be charging or discharging
+        self.history: list[dict[str, Any]] = []  # stores past actions and consequences
+        self.memory: list[dict[str, Any]] = []
         # Safety constraints configuration
-        self.max_temperature = 85.0
+        self.max_temperature: float = 85.0
         # Per-run counters for constraint violations
-        self.energy_violations = 0
-        self.temperature_violations = 0
+        self.energy_violations: int = 0
+        self.temperature_violations: int = 0
 
     # Adding basic "behaviuor of the node"
 
-    def charge(self, amount) -> None:
+    def charge(self, amount: float) -> None:
         self.energy = min(self.max_energy, self.energy + amount * self.efficiency)
         self.degradation += 0.001
         self.state = "charging"
 
-    def discharge(self, amount) -> None:
+    def discharge(self, amount: float) -> None:
         self.energy = max(self.min_energy, self.energy - amount / self.efficiency)
         self.state = "discharging"
 
@@ -56,7 +57,7 @@ class EnergyNode:
             self.temperature = self.max_temperature
             # penalty: extra wear when overheated
             self.degradation += 0.002
-        self.temperature = max(20, self.temperature)
+        self.temperature = max(20.0, self.temperature)
 
         # Efficiency dynamically affected by degradation, temp, and energy load
         thermal_penalty = (self.temperature - 25) * 0.0018
@@ -88,7 +89,7 @@ class EnergyNode:
         stability = (self.energy * self.efficiency) / (1 + self.degradation)
 
         # Log current state
-        entry = {
+        entry: dict[str, Any] = {
             "energy": self.energy,
             "efficiency": self.efficiency,
             "degradation": self.degradation,
@@ -107,7 +108,7 @@ class EnergyNode:
 
         # --- Detect and remember low stability safely ---
         if stability < 40:
-            snapshot = {
+            snapshot: dict[str, Any] = {
                 "step": len(self.history),
                 "energy": self.energy,
                 "efficiency": self.efficiency,

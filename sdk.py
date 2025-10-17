@@ -87,6 +87,3 @@ def run_multinode(
         controller_factory=ctrl_cls,
         do_plots=do_plots,
     )
-
-
-
