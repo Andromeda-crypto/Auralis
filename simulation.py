@@ -1,9 +1,19 @@
 from Nodes.base_node import EnergyNode
-from utils import plot_metric, compute_kpis, print_run_report, summarize_performance, plot_series, compute_economic_kpis, print_economic_report, ensure_dir, default_run_id, save_history_csv, save_json
 from adaptive import adapt_node
 import random
 import time
-import math
+from utils import (
+    compute_economic_kpis,
+    compute_kpis,
+    default_run_id,
+    ensure_dir,
+    plot_metric,
+    plot_series,
+    print_economic_report,
+    print_run_report,
+    save_history_csv,
+    save_json,
+)
 try:
     import cvxpy as cp
 except Exception:
@@ -101,7 +111,10 @@ class CvxpyMPCController(Controller):
         if len(self.window) > 48:
             self.window.pop(0)
         last_price = self.window[-1]
-        forecast = [self.window[-i-1] if i < len(self.window) else last_price for i in range(self.horizon)]
+        forecast = [
+            self.window[-i - 1] if i < len(self.window) else last_price
+            for i in range(self.horizon)
+        ]
         forecast = list(reversed(forecast))
 
         soc0 = max(0.0, min(1.0, node.energy / node.capacity))
@@ -115,7 +128,9 @@ class CvxpyMPCController(Controller):
             ]
         constraints += [soc >= self.min_soc, soc <= self.max_soc]
 
-        objective = cp.Minimize(cp.sum([-forecast[t] * u[t] for t in range(self.horizon)]) + 0.01 * cp.sum_squares(u))
+        objective = cp.Minimize(
+            cp.sum([-forecast[t] * u[t] for t in range(self.horizon)]) + 0.01 * cp.sum_squares(u)
+        )
         prob = cp.Problem(objective, constraints)
         try:
             prob.solve(solver=cp.ECOS, warm_start=True, verbose=False)
@@ -156,7 +171,9 @@ def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir=
             control_import.append(max(0.0, world.energy_demand - world.energy_supply))
         elif action_type == "discharge":
             node.discharge(amount)
-            control_import.append(max(0.0, world.energy_demand - world.energy_supply) - min(amount / 10.0, 1.0))
+            control_import.append(
+                max(0.0, world.energy_demand - world.energy_supply) - min(amount / 10.0, 1.0)
+            )
         else:
             node.rest()
             control_import.append(max(0.0, world.energy_demand - world.energy_supply))
@@ -185,7 +202,12 @@ def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir=
     print("\nSimulation complete.")
     node.recall_instability_events()
 
-    kpis = compute_kpis(node.history, stability_threshold=node.stability_threshold, energy_bounds=(node.min_energy, node.max_energy), temperature_cap=node.max_temperature)
+    kpis = compute_kpis(
+        node.history,
+        stability_threshold=node.stability_threshold,
+        energy_bounds=(node.min_energy, node.max_energy),
+        temperature_cap=node.max_temperature,
+    )
     print_run_report(node.history, kpis)
     summarize_performance(node.history)
 
@@ -197,7 +219,10 @@ def run_sim(controller, steps=50, seed=42, do_plots=False, run_id=None, out_dir=
     out_path = f"{out_dir}/{run_id}"
     ensure_dir(out_path)
     save_history_csv(node.history, f"{out_path}/history.csv")
-    save_json({"seed": seed, "controller": controller.name(), "kpis": kpis, "econ": econ}, f"{out_path}/summary.json")
+    save_json(
+        {"seed": seed, "controller": controller.name(), "kpis": kpis, "econ": econ},
+        f"{out_path}/summary.json",
+    )
 
     return {
         "history": node.history,
@@ -227,7 +252,12 @@ if __name__ == "__main__":
     print("\nAll controller runs complete.")
 
 def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
-    ctrls = ctrls or [HeuristicController(), RuleBasedController(), MPCLiteController(), CvxpyMPCController()]
+    ctrls = ctrls or [
+        HeuristicController(),
+        RuleBasedController(),
+        MPCLiteController(),
+        CvxpyMPCController(),
+    ]
     rows = []
     for ctrl in ctrls:
         savings_list = []
@@ -243,13 +273,24 @@ def run_leaderboard(ctrls=None, steps=60, seeds=(101, 102, 103)):
         })
     print("\n=== Leaderboard (mean over seeds) ===")
     for r in rows:
-        print(f"{r['controller']:<20} savings=${r['mean_savings']:.2f}  violations={r['total_violations']}")
+        print(
+            f"{r['controller']:<20} savings=${r['mean_savings']:.2f}  violations={r['total_violations']}"
+        )
     return rows
 
 
 # --- Multi-node with shared feeder constraint --- #
 
-def run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=999, controller_factory=lambda: RuleBasedController(), run_id=None, out_dir="artifacts", do_plots=True):
+def run_multi_node(
+    num_nodes=3,
+    feeder_limit=0.8,
+    steps=60,
+    seed=999,
+    controller_factory=lambda: RuleBasedController(),
+    run_id=None,
+    out_dir="artifacts",
+    do_plots=True,
+):
     random.seed(seed)
     world = EnergyWorld()
     nodes = [EnergyNode() for _ in range(num_nodes)]
@@ -279,7 +320,8 @@ def run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=999, controller
             socs = [100.0 * (n.energy / n.capacity) for n in nodes]
             capacities = [max(0.0, (soc - 30.0) / 70.0) for soc in socs]  # 0..1
             total_cap = sum(capacities) or 1.0
-            # Translate required reduction into discharge amounts; map site import units to node discharge units (heuristic factor 10)
+            # Translate required reduction into discharge amounts; map site import units
+            # to node discharge units (heuristic factor 10)
             for cap in capacities:
                 share = (cap / total_cap) * required_reduction
                 amount = min(15.0, share * 10.0)  # cap per-step discharge magnitude
@@ -312,14 +354,21 @@ def run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=999, controller
             nodes[i].log_state()
             adapt_node(nodes[i])
             per_node_histories[i] = nodes[i].history
-        print(f"MultiNode step {step:02d}: import={total_import:.3f}/{feeder_limit:.3f} price={world.price:.2f}")
+        print(
+            f"MultiNode step {step:02d}: import={total_import:.3f}/{feeder_limit:.3f} price={world.price:.2f}"
+        )
         time.sleep(0.01)
 
     # Aggregate KPIs: per node plus economic site KPIs
     print("\nMulti-node simulation complete.")
     for idx, n in enumerate(nodes):
         print(f"\n-- Node {idx} report --")
-        k = compute_kpis(n.history, stability_threshold=n.stability_threshold, energy_bounds=(n.min_energy, n.max_energy), temperature_cap=n.max_temperature)
+        k = compute_kpis(
+            n.history,
+            stability_threshold=n.stability_threshold,
+            energy_bounds=(n.min_energy, n.max_energy),
+            temperature_cap=n.max_temperature,
+        )
         print_run_report(n.history, k)
 
     econ = compute_economic_kpis(prices, site_baseline_import, site_control_import)
@@ -331,8 +380,19 @@ def run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=999, controller
     out_path = f"{out_dir}/{run_id}"
     ensure_dir(out_path)
     # Site-level
-    save_json({"seed": seed, "num_nodes": num_nodes, "feeder_limit": feeder_limit}, f"{out_path}/site_meta.json")
-    save_json({"prices": prices, "site_baseline_import": site_baseline_import, "site_control_import": site_control_import, "econ": econ}, f"{out_path}/site_series.json")
+    save_json(
+        {"seed": seed, "num_nodes": num_nodes, "feeder_limit": feeder_limit},
+        f"{out_path}/site_meta.json",
+    )
+    save_json(
+        {
+            "prices": prices,
+            "site_baseline_import": site_baseline_import,
+            "site_control_import": site_control_import,
+            "econ": econ,
+        },
+        f"{out_path}/site_series.json",
+    )
     # Per node history
     for idx, hist in enumerate(per_node_histories):
         save_history_csv(hist, f"{out_path}/node_{idx}_history.csv")
@@ -353,4 +413,6 @@ def run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=999, controller
 
 # --- Demo: Multi-node run --- 
     print("\n=== Running multi-node demo (shared feeder limit) ===")
-    _multi_results = run_multi_node(num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True)
+    _multi_results = run_multi_node(
+        num_nodes=3, feeder_limit=0.8, steps=60, seed=2024, do_plots=True
+    )

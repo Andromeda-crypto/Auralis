@@ -1,7 +1,7 @@
 """
 Creates a Singular Node that behaves like an appliance and has similar characteristics 
 """
-import random 
+import random
 
 
 

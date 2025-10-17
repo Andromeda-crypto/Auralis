@@ -1,4 +1,5 @@
 import streamlit as st
+
 from sdk import run_controller, run_multinode
 
 st.set_page_config(page_title="Auralis Dashboard", layout="wide")
@@ -13,7 +14,9 @@ with tab1:
     seed = st.number_input("Seed", value=123)
     do_plots = st.checkbox("Show Plots", value=True)
     if st.button("Run Single Node"):
-        res = run_controller(controller_name=controller, steps=int(steps), seed=int(seed), do_plots=do_plots)
+        res = run_controller(
+            controller_name=controller, steps=int(steps), seed=int(seed), do_plots=do_plots
+        )
         st.json({"kpis": res["kpis"], "econ": res["econ"]})
 
 with tab2:
@@ -25,7 +28,14 @@ with tab2:
     seed = st.number_input("Seed (multi)", value=2024, key="multi_seed")
     do_plots = st.checkbox("Show Plots (multi)", value=True, key="multi_plots")
     if st.button("Run Multi Node"):
-        res = run_multinode(num_nodes=int(num_nodes), feeder_limit=float(feeder_limit), steps=int(steps), seed=int(seed), controller_name=controller, do_plots=do_plots)
+        res = run_multinode(
+            num_nodes=int(num_nodes),
+            feeder_limit=float(feeder_limit),
+            steps=int(steps),
+            seed=int(seed),
+            controller_name=controller,
+            do_plots=do_plots,
+        )
         st.json({
             "site_baseline_import": res["site_baseline_import"][:10],
             "site_control_import": res["site_control_import"][:10],

@@ -24,7 +24,7 @@ def adapt_node(node, lookback=20, stability_threshold=40):
         return  # nothing to adapt
 
     # Calculate average conditions during instability
-    avg_energy = sum(m["energy"] for m in recent_instabilities) / len(recent_instabilities)
+    _avg_energy = sum(m["energy"] for m in recent_instabilities) / len(recent_instabilities)
     avg_temp = sum(m["temperature"] for m in recent_instabilities) / len(recent_instabilities)
     avg_eff = sum(m["efficiency"] for m in recent_instabilities) / len(recent_instabilities)
 

@@ -1,7 +1,9 @@
+from typing import Optional
+
 from fastapi import FastAPI
 from pydantic import BaseModel
-from typing import Optional
-from sdk import suggest_setpoint, run_controller, run_multinode
+
+from sdk import run_controller, run_multinode, suggest_setpoint
 
 app = FastAPI(title="Auralis API")
 
@@ -38,7 +40,9 @@ class RunRequest(BaseModel):
 
 @app.post("/run")
 def run(req: RunRequest):
-    res = run_controller(controller_name=req.controller, steps=req.steps, seed=req.seed, do_plots=False)
+    res = run_controller(
+        controller_name=req.controller, steps=req.steps, seed=req.seed, do_plots=False
+    )
     return {"kpis": res["kpis"], "econ": res["econ"]}
 
 # GET alias for convenience/testing
@@ -58,13 +62,39 @@ class MultiRunRequest(BaseModel):
 
 @app.post("/run_multi")
 def run_multi(req: MultiRunRequest):
-    res = run_multinode(num_nodes=req.num_nodes, feeder_limit=req.feeder_limit, steps=req.steps, seed=req.seed, controller_name=req.controller, do_plots=False)
-    return {"site_baseline_import": res["site_baseline_import"], "site_control_import": res["site_control_import"]}
+    res = run_multinode(
+        num_nodes=req.num_nodes,
+        feeder_limit=req.feeder_limit,
+        steps=req.steps,
+        seed=req.seed,
+        controller_name=req.controller,
+        do_plots=False,
+    )
+    return {
+        "site_baseline_import": res["site_baseline_import"],
+        "site_control_import": res["site_control_import"],
+    }
 
 # GET alias for convenience/testing
 @app.get("/run_multi")
-def run_multi_get(controller: Optional[str] = "rule_based", num_nodes: int = 3, feeder_limit: float = 0.8, steps: int = 60, seed: int = 2024):
-    res = run_multinode(num_nodes=num_nodes, feeder_limit=feeder_limit, steps=steps, seed=seed, controller_name=controller, do_plots=False)
-    return {"site_baseline_import": res["site_baseline_import"], "site_control_import": res["site_control_import"]}
+def run_multi_get(
+    controller: Optional[str] = "rule_based",
+    num_nodes: int = 3,
+    feeder_limit: float = 0.8,
+    steps: int = 60,
+    seed: int = 2024,
+):
+    res = run_multinode(
+        num_nodes=num_nodes,
+        feeder_limit=feeder_limit,
+        steps=steps,
+        seed=seed,
+        controller_name=controller,
+        do_plots=False,
+    )
+    return {
+        "site_baseline_import": res["site_baseline_import"],
+        "site_control_import": res["site_control_import"],
+    }
 
 

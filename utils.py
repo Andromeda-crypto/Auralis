@@ -2,11 +2,12 @@
 Plot to visualize and analyze the simulation of nodes, to specify direction and tasks
 """
 
-import matplotlib.pyplot as plt
-import os
-import json
 import csv
+import json
+import os
 from datetime import datetime
+
+import matplotlib.pyplot as plt
 
 def plot_metric(history,metric_name):
     values = [entry[metric_name] for entry in history]
@@ -66,7 +67,9 @@ def compute_kpis(history, stability_threshold=40, energy_bounds=(0, 100), temper
     time_unstable = sum(1 for h in history if h["stability"] < stability_threshold)
 
     energy_values = [h["energy"] for h in history]
-    energy_throughput = sum(abs(energy_values[i] - energy_values[i-1]) for i in range(1, len(energy_values)))
+    energy_throughput = sum(
+        abs(energy_values[i] - energy_values[i - 1]) for i in range(1, len(energy_values))
+    )
 
     # Prefer using recorded cumulative counters if present
     last = history[-1]
