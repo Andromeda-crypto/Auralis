@@ -18,7 +18,7 @@ class EnergyNode:
         self.stability_threshold: float = 40
         self.state: str = "idle"  # can also be charging or discharging
         self.history: list[dict[str, Any]] = []  # stores past actions and consequences
-        self.memory: list[dict[str, Any]] = []
+        self.memory: list[dict[str, Any]] = [] # keeps track of unwanted results and pitfalls 
         # Safety constraints configuration
         self.max_temperature: float = 85.0
         # Per-run counters for constraint violations
