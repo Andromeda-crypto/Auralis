@@ -1,3 +1,6 @@
 .venv
 __pycache__
 artifacts
+.ruff_cache
+.mypy_cache
+.pytest_cache

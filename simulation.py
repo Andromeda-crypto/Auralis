@@ -474,7 +474,7 @@ def run_multi_node(
             plot_metric(per_node_histories[0], metric)
         plot_series(prices, "price")
 
-    # example run can be :
+    """# example run can be :
     # --- Demo: Multi-node run ---
     print("\n=== Running multi-node demo (shared feeder limit) ===")
     _multi_results = run_multi_node(
@@ -486,4 +486,4 @@ def run_multi_node(
         "prices": prices,
         "site_baseline_import": site_baseline_import,
         "site_control_import": site_control_import,
-    }
+    }"""
