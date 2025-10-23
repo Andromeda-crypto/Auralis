@@ -31,24 +31,19 @@ class EnergyWorld:
         self.energy_supply = random.uniform(0.5, 1.5)
         self.energy_demand = random.uniform(0.3, 1.2)
         self.noise = random.uniform(-0.05, 0.05)
-        # Simple TOU price signal (e.g., low at night, high in evening)
         self.price = 0.20
 
     def update_conditions(self) -> None:
-        # small random fluctuations every step
         self.energy_supply = max(
             0.1, min(self.energy_supply + random.uniform(-0.2, 0.2), 2.0)
         )
         self.energy_demand = max(
             0.1, min(self.energy_demand + random.uniform(-0.2, 0.2), 2.0)
         )
-        # price follows a daily-like pattern via random walk bounded
         self.price = max(0.05, min(self.price + random.uniform(-0.02, 0.02), 0.50))
 
 
 # --- Controllers --- #
-
-
 class Controller:
     def name(self) -> str:
         return self.__class__.__name__
@@ -142,7 +137,6 @@ class CvxpyMPCController(Controller):
                 node, world, net_flow, step
             )
 
-        # Simple rolling forecast (persistence)
         self.window.append(world.price)
         if len(self.window) > 48:
             self.window.pop(0)
@@ -226,7 +220,7 @@ def run_sim(
 
         node.update_physics()
         node.log_state()
-        adapt_node(node)
+        adapt_node(node,network_metrics="history")
 
         print(
             f"{controller.name()} {step:02d} : Energy = {node.energy:.2f}, "
@@ -337,9 +331,7 @@ def run_leaderboard(
     return rows
 
 
-# --- Multi-node with shared feeder constraint --- #
-
-
+#  Multi-node with shared feeder constraint
 def _default_controller_factory() -> Controller:
     """Default controller factory for multi-node simulation."""
     return RuleBasedController()
@@ -379,8 +371,6 @@ def run_multi_node(
         baseline_import = max(0.0, world.energy_demand - world.energy_supply)
         site_baseline_import.append(baseline_import)
 
-        # Coordinator: if baseline import exceeds feeder limit, allocate
-        # discharge across nodes
         required_reduction = max(0.0, baseline_import - feeder_limit)
 
         actions: list[Tuple[str, float]] = []
@@ -388,19 +378,15 @@ def run_multi_node(
             socs = [100.0 * (n.energy / n.capacity) for n in nodes]
             capacities = [max(0.0, (soc - 30.0) / 70.0) for soc in socs]  # 0..1
             total_cap = sum(capacities) or 1.0
-            # Translate required reduction into discharge amounts; map site
-            # import units to node discharge units (heuristic factor 10)
             for cap in capacities:
                 share = (cap / total_cap) * required_reduction
                 amount = min(15.0, share * 10.0)  # cap per-step discharge magnitude
                 actions.append(("discharge", amount))
         else:
-            # use individual controllers
             for i in range(num_nodes):
                 net_flow = world.energy_supply - world.energy_demand
                 actions.append(ctrls[i].select_action(nodes[i], world, net_flow, step))
 
-        # Apply actions and compute site control import
         total_import = baseline_import
         total_offset = 0.0
         for i in range(num_nodes):
@@ -430,7 +416,6 @@ def run_multi_node(
 
         time.sleep(0.01)
 
-    # Aggregate KPIs: per node plus economic site KPIs
     print("\nMulti-node simulation complete.")
     for idx, n in enumerate(nodes):
         print(f"\n-- Node {idx} report --")
@@ -446,11 +431,10 @@ def run_multi_node(
     print("\n-- Site economic report --")
     print_economic_report(econ)
 
-    # Save artifacts
     run_id = run_id or default_run_id(prefix="multinode")
     out_path = f"{out_dir}/{run_id}"
     ensure_dir(out_path)
-    # Site-level
+
     save_json(
         {"seed": seed, "num_nodes": num_nodes, "feeder_limit": feeder_limit},
         f"{out_path}/site_meta.json",
@@ -464,11 +448,10 @@ def run_multi_node(
         },
         f"{out_path}/site_series.json",
     )
-    # Per node history
+
     for idx, hist in enumerate(per_node_histories):
         save_history_csv(hist, f"{out_path}/node_{idx}_history.csv")
 
-    # Plots (optional but keep showing)
     if do_plots and per_node_histories:
         for metric in ["energy", "efficiency", "degradation", "stability", "temperature"]:
             plot_metric(per_node_histories[0], metric)

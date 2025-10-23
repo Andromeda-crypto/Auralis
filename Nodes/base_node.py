@@ -19,9 +19,7 @@ class EnergyNode:
         self.state: str = "idle"  # can also be charging or discharging
         self.history: list[dict[str, Any]] = []  # stores past actions and consequences
         self.memory: list[dict[str, Any]] = [] # keeps track of unwanted results and pitfalls 
-        # Safety constraints configuration
         self.max_temperature: float = 85.0
-        # Per-run counters for constraint violations
         self.energy_violations: int = 0
         self.temperature_violations: int = 0
 
@@ -40,22 +38,18 @@ class EnergyNode:
         self.state = "idle"
 
     def update_physics(self) -> None:
-        # Random natural energy leakage (depends on efficiency + random noise)
         leakage = 0.05 * (1 - self.efficiency) + random.uniform(-0.02, 0.02)
         self.energy -= float(max(0, leakage))
 
-        # Temperature dynamics (introduce small variance)
         if self.state == "charging":
             self.temperature += random.uniform(0.2, 0.5)
         elif self.state == "discharging":
             self.temperature += random.uniform(0.3, 0.6)
         else:
             self.temperature -= random.uniform(0.1, 0.3)
-        # Check and cap temperature; count violation if exceeded
         if self.temperature > self.max_temperature:
             self.temperature_violations += 1
             self.temperature = self.max_temperature
-            # penalty: extra wear when overheated
             self.degradation += 0.002
         self.temperature = max(20.0, self.temperature)
 
@@ -73,9 +67,8 @@ class EnergyNode:
             stress_factor += 0.5
         wear = (0.002 if self.state == "idle" else 0.005) * stress_factor
         self.degradation += wear
-        # Slight random drift in energy
         self.energy += random.uniform(-0.3, 0.3)
-        # Enforce energy bounds; count violation if exceeded
+
         if self.energy < self.min_energy or self.energy > self.max_energy:
             self.energy_violations += 1
             self.degradation += 0.001  # mild penalty

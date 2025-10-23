@@ -62,7 +62,6 @@ def _trim_logs(node: Any, max_log: int = 500) -> None:
 
 # Core Adaptive Node Function
 
-
 def adapt_node(node: Any, network_metrics: Dict[str, float]) -> None:
     """
     Adjust the node's parameters based on network-wide averages and its own performance.
@@ -78,18 +77,13 @@ def adapt_node(node: Any, network_metrics: Dict[str, float]) -> None:
         node.learning_rate = 1.0
     if not hasattr(node, "history"):
         node.history = []
-
-    # Record pre-adaptation state
     pre_state = {
         "energy": _safe_value(node.energy),
         "voltage": _safe_value(node.voltage),
         "efficiency": _safe_value(node.efficiency),
     }
-
-    # Use learning rate directly in this cycle’s corrections
     lr = node.learning_rate
 
-    # Adaptive corrections based on deviation from network state
     if node.temperature > avg_temp + 2.0:
         node.energy *= 0.95 * lr
         node.efficiency *= 1.02 * lr
@@ -98,19 +92,16 @@ def adapt_node(node: Any, network_metrics: Dict[str, float]) -> None:
         node.energy *= 0.98 * lr
         node.voltage = (node.voltage + 1.0) / 2
 
-    # Stability damping to prevent runaway oscillations
+
     node.energy = max(node.energy, 0.0)
     node.voltage = max(min(node.voltage, 1.2), 0.8)
     node.efficiency = max(min(node.efficiency, 1.5), 0.0)
 
-    # Record post-adaptation state
     post_state = {
         "energy": _safe_value(node.energy),
         "voltage": _safe_value(node.voltage),
         "efficiency": _safe_value(node.efficiency),
     }
-
-    # Calculate and record reinforcement score
     reinforcement_score = _calculate_reinforcement_score(pre_state, post_state)
     node.reinforcement_log.append({"score": reinforcement_score})
 
@@ -125,5 +116,5 @@ def adapt_node(node: Any, network_metrics: Dict[str, float]) -> None:
         "learning_rate": node.learning_rate
     })
 
-    # Trim logs to prevent memory issues on long runs
+    # Trim logs to prevent memory issues 
     _trim_logs(node, max_log=500)
