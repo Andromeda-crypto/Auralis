@@ -10,3 +10,6 @@ pytest-cov
 mypy
 ruff
 cvxpy
+scikit-learn
+tensorflow
+joblib
