@@ -159,9 +159,6 @@ def print_economic_report(econ_kpis: Dict[str, float]) -> None:
     print(f"Savings:       ${econ_kpis.get('savings', 0):.2f}")
 
 
-# --- Artifact utilities --- #
-
-
 def ensure_dir(path: str) -> None:
     os.makedirs(path, exist_ok=True)
 
